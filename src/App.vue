@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import MovieFilters from './components/MovieFilters.vue'
 import MovieGrid from './components/MovieGrid.vue'
 import MovieHeader from './components/MovieHeader.vue'
@@ -23,6 +23,7 @@ const selectedGenre = ref('')
 const selectedCertification = ref('')
 const searchTimeout = ref(null)
 const activeView = ref('popular')
+const detailSection = ref(null)
 
 const certificationOptions = [
   { value: '', label: 'Todas las edades' },
@@ -117,11 +118,19 @@ async function selectMovie(movie) {
       `https://api.themoviedb.org/3/movie/${movie.id}?language=es-ES&append_to_response=videos,credits,release_dates`
     )
     selectedMovie.value = data
+    await nextTick()
+    if (window.matchMedia('(max-width: 991.98px)').matches) {
+      detailSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
   } catch {
     errorMessage.value = 'No pudimos cargar los detalles de la película.'
   } finally {
     loadingDetails.value = false
   }
+}
+
+function closeMovieDetail() {
+  selectedMovie.value = null
 }
 
 watch(searchTerm, (value) => {
@@ -158,7 +167,11 @@ onMounted(async () => {
       <div v-if="errorMessage" class="alert alert-danger shadow-sm">{{ errorMessage }}</div>
 
       <section class="row g-4">
-        <div class="col-lg-7">
+        <div ref="detailSection" class="col-lg-5 order-1 order-lg-2">
+          <MovieDetail :movie="selectedMovie" :loading="loadingDetails" @close="closeMovieDetail" />
+        </div>
+
+        <div class="col-lg-7 order-2 order-lg-1">
           <MovieGrid
             :movies="movieList"
             :loading-popular="loadingPopular"
@@ -168,10 +181,6 @@ onMounted(async () => {
             @select="selectMovie"
           />
         </div>
-
-        <div class="col-lg-5">
-          <MovieDetail :movie="selectedMovie" :loading="loadingDetails" />
-        </div>
       </section>
     </main>
   </div>
@@ -180,11 +189,20 @@ onMounted(async () => {
 <style>
 .app-shell {
   min-height: 100vh;
+  position: relative;
   background:
-    radial-gradient(circle at top left, rgba(255, 193, 7, 0.16), transparent 28%),
-    radial-gradient(circle at top right, rgba(13, 110, 253, 0.12), transparent 24%),
-    linear-gradient(180deg, #0f172a 0%, #111827 100%);
+    linear-gradient(rgba(3, 7, 18, 0.68), rgba(3, 7, 18, 0.82)),
+    url('/img/background.png') center center / cover no-repeat fixed;
   color: #f8fafc;
+}
+
+.app-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .hero,
@@ -253,6 +271,14 @@ main {
 
 .detail-panel {
   top: 1rem;
+}
+
+.detail-close {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  line-height: 1;
+  border-radius: 999px;
 }
 
 @media (max-width: 991.98px) {
