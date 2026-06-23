@@ -22,9 +22,13 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  favoriteIds: {
+    type: Array,
+    default: () => [],
+  },
 })
 
-const emit = defineEmits(['select'])
+const emit = defineEmits(['select', 'toggle-favorite'])
 
 const imageBase = 'https://image.tmdb.org/t/p/w500'
 const imageUrl = (path) => (path ? `${imageBase}${path}` : '')
@@ -55,10 +59,12 @@ const genreLabel = (genreIds) => {
         v-for="movie in movies"
         :key="movie.id"
         :movie="movie"
+        :is-favorite="favoriteIds.includes(movie.id)"
         :image-url="imageUrl"
         :format-year="formatYear"
         :genre-label="genreLabel"
         @select="emit('select', $event)"
+        @toggle-favorite="emit('toggle-favorite', $event)"
       />
     </div>
 

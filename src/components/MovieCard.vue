@@ -4,6 +4,10 @@ defineProps({
     type: Object,
     required: true,
   },
+  isFavorite: {
+    type: Boolean,
+    default: false,
+  },
   imageUrl: {
     type: Function,
     required: true,
@@ -18,11 +22,22 @@ defineProps({
   },
 })
 
-defineEmits(['select'])
+defineEmits(['select', 'toggle-favorite'])
 </script>
 
 <template>
   <article class="movie-card card border-0 shadow-sm" @click="$emit('select', movie)">
+    <button
+      type="button"
+      class="favorite-btn"
+      :class="isFavorite ? 'favorite-btn--active' : 'favorite-btn--idle'"
+      :aria-label="isFavorite ? 'Quitar de favoritas' : 'Agregar a favoritas'"
+      :title="isFavorite ? 'Quitar de favoritas' : 'Agregar a favoritas'"
+      @click.stop="$emit('toggle-favorite', movie)"
+    >
+      {{ isFavorite ? '❤️' : '🤍' }}
+    </button>
+
     <img
       v-if="movie.poster_path"
       :src="imageUrl(movie.poster_path)"
@@ -32,6 +47,7 @@ defineEmits(['select'])
     <div v-else class="poster-placeholder d-flex align-items-center justify-content-center">
       Sin póster
     </div>
+
     <div class="card-body">
       <div class="d-flex justify-content-between gap-2">
         <h3 class="h6 card-title mb-1">{{ movie.title }}</h3>
