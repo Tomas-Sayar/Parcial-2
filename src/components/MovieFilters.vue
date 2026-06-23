@@ -1,5 +1,5 @@
 <script setup>
-const props = defineProps({
+defineProps({
   searchTerm: {
     type: String,
     default: '',
@@ -22,11 +22,7 @@ const props = defineProps({
   },
 })
 
-defineEmits([
-  'update:searchTerm',
-  'update:selectedGenre',
-  'update:selectedCertification',
-])
+defineEmits(['update:searchTerm', 'update:selectedGenre', 'update:selectedCertification'])
 </script>
 
 <template>
@@ -36,7 +32,7 @@ defineEmits([
         <div class="col-lg-5">
           <label class="form-label fw-semibold">Buscar por título</label>
           <input
-            :value="props.searchTerm"
+            :value="searchTerm"
             type="text"
             class="form-control form-control-lg"
             placeholder="Ej: Inception, Avatar, Interstellar..."
@@ -46,7 +42,7 @@ defineEmits([
         <div class="col-md-4 col-lg-3">
           <label class="form-label fw-semibold">Género</label>
           <select
-            :value="props.selectedGenre"
+            :value="selectedGenre"
             class="form-select form-select-lg"
             @change="$emit('update:selectedGenre', $event.target.value)"
           >
@@ -59,7 +55,7 @@ defineEmits([
         <div class="col-md-3 col-lg-2">
           <label class="form-label fw-semibold">Clasificación</label>
           <select
-            :value="props.selectedCertification"
+            :value="selectedCertification"
             class="form-select form-select-lg"
             @change="$emit('update:selectedCertification', $event.target.value)"
           >

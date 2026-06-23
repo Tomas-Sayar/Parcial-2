@@ -56,7 +56,7 @@ defineEmits(['select', 'toggle-favorite'])
       <p class="text-secondary small mb-2">{{ genreLabel(movie.genre_ids) }}</p>
       <p class="card-text small text-truncate-3">{{ movie.overview || 'Sin descripción' }}</p>
       <div class="d-flex justify-content-between align-items-center">
-        <span class="small text-warning fw-semibold">⭐ {{ movie.vote_average?.toFixed(1) || 'NO' }}</span>
+        <span class="small text-warning fw-semibold">⭐ {{ movie.vote_average?.toFixed(1) || 'N/D' }}</span>
       </div>
     </div>
   </article>

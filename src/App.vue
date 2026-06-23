@@ -1,13 +1,12 @@
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import MovieFilters from './components/MovieFilters.vue'
 import MovieGrid from './components/MovieGrid.vue'
 import MovieHeader from './components/MovieHeader.vue'
 import MovieDetail from './components/MovieDetail.vue'
 import { addFavorite, getFavorites, removeFavorite } from './services/favoritesDb'
+import { getGenres, getMovieDetails, getPopularMovies, searchTmdbMovies } from './services/tmdbApi'
 
-const API_TOKEN =
-  'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhZjdmYzI4MDRmOWU3Njg3OGI2M2Y4N2Q2YjQ5ZjEyYSIsIm5iZiI6MTc4MTU3NzA2MC45NDcsInN1YiI6IjZhMzBiNTY0ZTMyNWYwMWZhZjc0M2QyNyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.F5xFJZS9azIlZeGD0EbeAcpB6RHP3yH7R87xfVpWJLM'
 const SEARCH_DELAY = 450
 
 const genres = ref([])
@@ -19,7 +18,6 @@ const loadingSearch = ref(false)
 const loadingDetails = ref(false)
 const errorMessage = ref('')
 const searchTerm = ref('')
-const debouncedTerm = ref('')
 const selectedGenre = ref('')
 const selectedCertification = ref('')
 const searchTimeout = ref(null)
@@ -37,11 +35,6 @@ const certificationOptions = [
   { value: 'NC-17', label: 'NC-17' },
 ]
 
-const authHeaders = {
-  accept: 'application/json',
-  Authorization: `Bearer ${API_TOKEN}`,
-}
-
 const certificationLabel = computed(() => {
   const found = certificationOptions.find((option) => option.value === selectedCertification.value)
   return found?.label ?? 'Todas las edades'
@@ -51,11 +44,7 @@ const movieList = computed(() => {
   const baseList = activeView.value === 'search' ? searchResults.value : popularMovies.value
 
   return baseList.filter((movie) => {
-    const matchesGenre =
-      !selectedGenre.value ||
-      movie.genre_ids?.includes(Number(selectedGenre.value))
-
-    return matchesGenre
+    return !selectedGenre.value || movie.genre_ids?.includes(Number(selectedGenre.value))
   })
 })
 
@@ -65,15 +54,8 @@ const favoriteMovies = computed(() =>
   [...favorites.value].sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))
 )
 
-async function fetchJson(url) {
-  const response = await fetch(url, { headers: authHeaders })
-  if (!response.ok) throw new Error(`Error HTTP ${response.status}`)
-  return response.json()
-}
-
 async function loadGenres() {
-  const data = await fetchJson('https://api.themoviedb.org/3/genre/movie/list?language=es-ES')
-  genres.value = data.genres ?? []
+  genres.value = await getGenres()
 }
 
 async function loadPopularMovies() {
@@ -81,23 +63,10 @@ async function loadPopularMovies() {
   errorMessage.value = ''
 
   try {
-    const params = new URLSearchParams({
-      language: 'es-ES',
-      sort_by: 'popularity.desc',
-      page: '1',
+    popularMovies.value = await getPopularMovies({
+      genreId: selectedGenre.value,
+      certification: selectedCertification.value,
     })
-
-    if (selectedGenre.value) {
-      params.set('with_genres', String(selectedGenre.value))
-    }
-
-    if (selectedCertification.value) {
-      params.set('certification_country', 'US')
-      params.set('with_certification', selectedCertification.value)
-    }
-
-    const data = await fetchJson(`https://api.themoviedb.org/3/discover/movie?${params.toString()}`)
-    popularMovies.value = data.results ?? []
   } catch {
     errorMessage.value = 'No pudimos cargar las películas populares.'
   } finally {
@@ -105,7 +74,7 @@ async function loadPopularMovies() {
   }
 }
 
-async function searchMovies(query) {
+async function runSearch(query) {
   if (!query.trim()) {
     searchResults.value = []
     activeView.value = 'popular'
@@ -117,10 +86,7 @@ async function searchMovies(query) {
   activeView.value = 'search'
 
   try {
-    const data = await fetchJson(
-      `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(query)}&language=es-ES&page=1&include_adult=false`
-    )
-    searchResults.value = data.results ?? []
+    searchResults.value = await searchTmdbMovies(query)
   } catch {
     errorMessage.value = 'No pudimos realizar la búsqueda.'
   } finally {
@@ -133,11 +99,9 @@ async function selectMovie(movie) {
   errorMessage.value = ''
 
   try {
-    const data = await fetchJson(
-      `https://api.themoviedb.org/3/movie/${movie.id}?language=es-ES&append_to_response=videos,credits,release_dates`
-    )
-    selectedMovie.value = data
+    selectedMovie.value = await getMovieDetails(movie.id)
     await nextTick()
+
     if (window.matchMedia('(max-width: 991.98px)').matches) {
       detailSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
@@ -181,10 +145,22 @@ function closeMovieDetail() {
   selectedMovie.value = null
 }
 
-watch(searchTerm, (value) => {
+watch(searchTerm, (value, _, onCleanup) => {
   clearTimeout(searchTimeout.value)
-  debouncedTerm.value = value
-  searchTimeout.value = setTimeout(() => searchMovies(debouncedTerm.value), SEARCH_DELAY)
+
+  if (!value.trim()) {
+    searchResults.value = []
+    activeView.value = 'popular'
+    return
+  }
+
+  searchTimeout.value = setTimeout(() => {
+    runSearch(value)
+  }, SEARCH_DELAY)
+
+  onCleanup(() => {
+    clearTimeout(searchTimeout.value)
+  })
 })
 
 watch([selectedGenre, selectedCertification], loadPopularMovies)
@@ -198,14 +174,15 @@ onMounted(async () => {
     errorMessage.value = 'No pudimos inicializar la aplicación.'
   }
 })
+
+onBeforeUnmount(() => {
+  clearTimeout(searchTimeout.value)
+})
 </script>
 
 <template>
   <div class="app-shell">
-    <MovieHeader
-      :favorites-count="favorites.length"
-      @open-favorites="openFavoritesModal"
-    />
+    <MovieHeader :favorites-count="favorites.length" @open-favorites="openFavoritesModal" />
 
     <main class="container pb-5">
       <MovieFilters
@@ -271,12 +248,8 @@ onMounted(async () => {
                     <h3 class="h6 mb-1">{{ movie.title }}</h3>
                     <p class="small text-secondary mb-1">{{ movie.release_date?.slice(0, 4) || 'N/D' }}</p>
                   </div>
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline-danger"
-                    @click="toggleFavorite(movie)"
-                  >
-                    Quitar
+                  <button type="button" class="btn btn-sm btn-outline-danger" @click="toggleFavorite(movie)">
+                    Eliminar
                   </button>
                 </div>
                 <p class="small mb-0 text-secondary text-truncate-3">
@@ -456,9 +429,17 @@ main {
 }
 
 .favorite-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
   gap: 1rem;
-  align-items: flex-start;
+  align-items: start;
+  padding: 0.75rem;
+  border-radius: 1rem;
+  background: rgba(15, 23, 42, 0.04);
+}
+
+[data-bs-theme='dark'] .favorite-item {
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .favorite-thumb {
@@ -469,6 +450,15 @@ main {
   flex: 0 0 auto;
   background: #111827;
   color: #e5e7eb;
+}
+
+.favorite-item > div {
+  min-width: 0;
+}
+
+.favorite-item h3,
+.favorite-item p {
+  word-break: break-word;
 }
 
 .favorite-thumb--empty {
@@ -485,7 +475,12 @@ main {
   }
 
   .favorite-item {
-    flex-direction: column;
+    grid-template-columns: 1fr;
+  }
+
+  .favorite-thumb {
+    width: 100%;
+    height: 180px;
   }
 }
 </style>

@@ -31,10 +31,12 @@ const props = defineProps({
 const emit = defineEmits(['select', 'toggle-favorite'])
 
 const imageBase = 'https://image.tmdb.org/t/p/w500'
+
 const imageUrl = (path) => (path ? `${imageBase}${path}` : '')
 const formatYear = (dateString) => (dateString ? new Date(dateString).getFullYear() : 'N/D')
 const genreLabel = (genreIds) => {
   if (!genreIds?.length) return 'Sin género'
+
   const firstGenre = props.genres.find((genre) => genreIds.includes(genre.id))
   return firstGenre?.name ?? 'Sin género'
 }
@@ -43,9 +45,7 @@ const genreLabel = (genreIds) => {
 <template>
   <div>
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <h2 class="h4 mb-0">
-        Peliculas destacadas
-      </h2>
+      <h2 class="h4 mb-0">Películas destacadas</h2>
     </div>
 
     <div v-if="loadingPopular && activeView === 'popular'" class="text-center py-5">
@@ -69,7 +69,7 @@ const genreLabel = (genreIds) => {
     </div>
 
     <div v-if="!movies.length && !loadingPopular && !loadingSearch" class="empty-state text-center py-5">
-      No se encontraron peliculas
+      No se encontraron películas
     </div>
   </div>
 </template>
