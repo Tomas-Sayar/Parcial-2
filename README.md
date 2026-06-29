@@ -60,9 +60,3 @@ pnpm preview
 ## Nota sobre la API
 
 La app consume TMDb mediante una API key embebida en el codigo fuente (`src/services/tmdbApi.js`). Si en algun momento cambias la API o decides mover esa configuracion a variables de entorno, tendras que actualizar ese archivo.
-
-## Recomendaciones
-
-- Usar un navegador moderno con JavaScript habilitado.
-- Si queres cambiar el puerto de desarrollo, modifica `server.port` en `vite.config.js`.
-- Si el cache o las favoritas se comportan raro durante pruebas, limpia los datos del sitio desde el navegador porque se guardan en `IndexedDB`.
