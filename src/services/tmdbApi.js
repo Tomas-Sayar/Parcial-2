@@ -1,4 +1,4 @@
-const API_KEY = 'af7fc2804f9e76878b63f87d6b49f12a'
+const API_KEY = import.meta.env.VITE_TMDB_API_KEY
 const BASE_URL = 'https://api.themoviedb.org/3'
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p'
 
@@ -30,21 +30,35 @@ export async function getGenres() {
 }
 
 
-// OBTENER PELÍCULAS POPULARES
+// OBTNER PELÍCULAS POPULARES
 export async function getPopularMovies(parametros) {
 
-  let parametrosURL = 'language=es-ES&sort_by=popularity.desc&page=1'
-  
-  if (parametros.genreId) {
-    parametrosURL = parametrosURL + '&with_genres=' + parametros.genreId
+  const tieneFiltros = parametros.genreId || parametros.certification
+
+  if (tieneFiltros) {
+    let parametrosURL = 'language=es-ES&sort_by=popularity.desc&page=1&vote_count.gte=200'
+
+    if (parametros.genreId) {
+      parametrosURL = parametrosURL + '&with_genres=' + parametros.genreId
+    }
+
+    if (parametros.certification) {
+      parametrosURL = parametrosURL + '&certification_country=US&with_certification=' + parametros.certification
+    }
+
+    const datos = await pedirDatosATMDB(BASE_URL + '/discover/movie?' + parametrosURL)
+
+    if (datos.results) {
+      return datos.results
+    } else {
+      return []
+    }
   }
-  
-  if (parametros.certification) {
-    parametrosURL = parametrosURL + '&certification_country=US&with_certification=' + parametros.certification
-  }
-  
-  const datos = await pedirDatosATMDB(BASE_URL + '/discover/movie?' + parametrosURL)
-  
+
+  // Sin filtros
+  const url = BASE_URL + '/movie/popular?language=es-ES&page=1'
+  const datos = await pedirDatosATMDB(url)
+
   if (datos.results) {
     return datos.results
   } else {

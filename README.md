@@ -9,7 +9,7 @@ Aplicacion web hecha con Vue 3 y Vite para explorar peliculas usando la API de T
 - Filtros por genero y certificacion.
 - Vista de detalle de una pelicula.
 - Gestion de favoritas guardadas en `IndexedDB`.
-- Interfaz responsive con Bootstrap y estilos personalizados
+- Interfaz responsive con Bootstrap.
 
 ## Tecnologias
 

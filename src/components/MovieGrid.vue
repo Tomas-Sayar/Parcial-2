@@ -55,7 +55,7 @@ const genreLabel = (genreIds) => {
       <div class="spinner-border text-primary" role="status"></div>
     </div>
     <div v-else class="row g-4">
-      <div v-for="movie in movies" :key="movie.id" class="col-sm-6 col-md-4 col-lg-3">
+      <div v-for="movie in movies" :key="movie.id" class="col-sm-6 col-md-4 col-lg-4">
         <MovieCard
           :movie="movie"
           :is-favorite="favoriteIds.includes(movie.id)"
